@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Investigación de Mercado - Formalización de MYPEs</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white !important; color: black !important; }
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen font-sans antialiased selection:bg-indigo-500 selection:text-white">
+
+    <!-- Header / Navbar -->
+    <header class="bg-slate-800/80 backdrop-blur border-b border-slate-700 sticky top-0 z-50 no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="p-2 bg-gradient-to-tr from-indigo-500 to-pink-500 rounded-xl shadow-lg">
+                    <i data-lucide="bar-chart-3" class="w-6 h-6 text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-pink-400 to-amber-400">
+                        Investigación de Mercado MYPE
+                    </h1>
+                    <p class="text-xs text-slate-400">Instrumento de Recolección de Datos en Línea</p>
+                </div>
+            </div>
+
+            <!-- Botones de Acción -->
+            <div class="flex flex-wrap items-center gap-2">
+                <button onclick="cambiarVista('form')" id="btn-vista-form" class="px-3 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-lg transition flex items-center gap-1.5 shadow-md">
+                    <i data-lucide="clipboard-list" class="w-4 h-4"></i>
+                    Responder Encuesta
+                </button>
+                <button onclick="cambiarVista('results')" id="btn-vista-results" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-semibold rounded-lg transition flex items-center gap-1.5 shadow-sm">
+                    <i data-lucide="pie-chart" class="w-4 h-4"></i>
+                    Ver Resultados (<span id="badge-count">0</span>)
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- VISTA 1: FORMULARIO DE ENCUESTA (Lo que ve el entrevistado) -->
+        <section id="sec-form" class="space-y-6">
+            <div class="bg-slate-800/50 border border-slate-700/60 rounded-2xl p-6 shadow-xl backdrop-blur max-w-3xl mx-auto">
+                <div class="text-center mb-6">
+                    <h2 class="text-xl font-bold text-slate-100">Encuesta de Formalización y Gestión MYPE</h2>
+                    <p class="text-xs text-slate-400 mt-1">Por favor, responda con sinceridad. Sus respuestas son totalmente confidenciales y anónimas para fines académicos.</p>
+                </div>
+
+                <form id="encuesta-form" onsubmit="enviarEncuestaNube(event)" class="space-y-8">
+                    <div id="preguntas-container" class="space-y-6">
+                        <!-- Las preguntas se cargan por JS -->
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-700 flex justify-center">
+                        <button type="submit" id="btn-enviar" class="w-full sm:w-auto px-8 py-3.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white font-bold rounded-xl shadow-lg hover:opacity-90 transition flex items-center justify-center gap-2">
+                            <i data-lucide="send" class="w-5 h-5"></i>
+                            Enviar Respuestas
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <!-- VISTA 2: RESULTADOS Y ESTADÍSTICAS (Para ti, el investigador) -->
+        <section id="sec-results" class="hidden space-y-8">
+            <div class="flex items-center justify-between bg-slate-800/80 p-4 rounded-xl border border-slate-700">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-100">Dashboard de Resultados en Tiempo Real</h2>
+                    <p class="text-xs text-slate-400">Total de encuestas recibidas en la nube: <span id="total-muestra" class="font-bold text-indigo-400">0</span></p>
+                </div>
+                <button onclick="cargarDatosDesdeNube()" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-amber-300 text-xs font-semibold rounded-lg border border-amber-500/30 transition flex items-center gap-1.5">
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                    Actualizar Datos
+                </button>
+            </div>
+
+            <!-- Grid de Estadísticas -->
+            <div id="resultados-grid" class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Se llenan con JS -->
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwbja_9h3c_kjrQXdL5j5bFP8UdYWpYEn1EjHv_mJIzOVpxNOH6o2Jn3fMS3CXtMFWyDQ/exec";
+
+        const preguntas = [
+            { id: 1, titulo: "1. Estado de Registro Legal", pregunta: "¿Su negocio cuenta con Registro Único de Contribuyentes (RUC)?", opciones: ["Sí, está activo y habido", "En proceso de tramitación", "No, opera de forma informal"] },
+            { id: 2, titulo: "2. Emisión de Comprobantes", pregunta: "¿Qué tipo de comprobante de pago entrega habitualmente?", opciones: ["Boletas o facturas electrónicas", "Solo notas de venta o recibos", "No emite ningún comprobante"] },
+            { id: 3, titulo: "3. Licencia Municipal", pregunta: "¿Posee Licencia de Funcionamiento vigente emitida por la municipalidad?", opciones: ["Sí, definitiva", "Solo temporal/en trámite", "No posee licencia"] },
+            { id: 4, titulo: "4. Régimen Laboral", pregunta: "¿Sus trabajadores se encuentran registrados en planilla?", opciones: ["Todos están en planilla", "Solo una parte está registrada", "Ninguno está en planilla"] },
+            { id: 5, titulo: "5. Financiamiento Bancario", pregunta: "¿Ha obtenido préstamos del sistema financiero formal para su empresa?", opciones: ["Sí, de bancos o cajas de ahorro", "Solo préstamos informales o personales", "Nunca ha solicitado préstamos"] },
+            { id: 6, titulo: "6. Medios de Pago Digitales", pregunta: "¿Utiliza medios de pago digitales (Yape, Plin, POS)?", opciones: ["Sí, de forma intensiva", "Ocasionalmente", "No, solo efectivo"] },
+            { id: 7, titulo: "7. Gestión Contable", pregunta: "¿Cuenta con asesoría contable o software financiero para su negocio?", opciones: ["Sí, contador permanente/software", "Solo apoyo eventual de terceros", "Lleva un registro manual básico"] },
+            { id: 8, titulo: "8. Capacitación Empresarial", pregunta: "¿Ha recibido capacitaciones sobre gestión de negocios en el último año?", opciones: ["Sí, más de 2 capacitaciones", "Solo 1 capacitación", "Ninguna capacitación"] },
+            { id: 9, titulo: "9. Obstáculo de Formalización", pregunta: "¿Cuál considera que es la principal traba para formalizarse?", opciones: ["Costos tributarios elevados", "Trámites complejos y burocracia", "Falta de información/orientación"] },
+            { id: 10, titulo: "10. Percepción de Ventas", pregunta: "¿Cree que la formalización incrementaría las ventas de su empresa?", opciones: ["Sí, significativamente", "Poco impacto", "No, solo genera gastos extras"] },
+        ];
+
+        const chartColors = ['#00f2fe', '#38ef7d', '#ff0844'];
+        let datasetGlobal = [];
+        let chartInstances = {};
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderForm();
+            cargarDatosDesdeNube();
+            lucide.createIcons();
+        });
+
+        function cambiarVista(vista) {
+            const secForm = document.getElementById('sec-form');
+            const secResults = document.getElementById('sec-results');
+            const btnForm = document.getElementById('btn-vista-form');
+            const btnResults = document.getElementById('btn-vista-results');
+
+            if (vista === 'form') {
+                secForm.classList.remove('hidden');
+                secResults.classList.add('hidden');
+                btnForm.className = "px-3 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-lg transition flex items-center gap-1.5 shadow-md";
+                btnResults.className = "px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-semibold rounded-lg transition flex items-center gap-1.5 shadow-sm";
+            } else {
+                secForm.classList.add('hidden');
+                secResults.classList.remove('hidden');
+                btnResults.className = "px-3 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-lg transition flex items-center gap-1.5 shadow-md";
+                btnForm.className = "px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-semibold rounded-lg transition flex items-center gap-1.5 shadow-sm";
+                cargarDatosDesdeNube();
+            }
+        }
+
+        function renderForm() {
+            const container = document.getElementById('preguntas-container');
+            container.innerHTML = '';
+
+            preguntas.forEach((q) => {
+                const card = document.createElement('div');
+                card.className = "p-5 bg-slate-800 border border-slate-700/80 rounded-xl space-y-3";
+
+                let opcionesHTML = q.opciones.map((op, oIdx) => `
+                    <label class="flex items-center space-x-3 p-3 rounded-lg border border-slate-700 hover:bg-slate-700/50 cursor-pointer transition">
+                        <input type="radio" name="p_${q.id}" value="${oIdx}" ${oIdx === 0 ? 'checked' : ''} class="w-4 h-4 text-indigo-500 focus:ring-indigo-400 accent-indigo-500">
+                        <span class="text-sm text-slate-200">${op}</span>
+                    </label>
+                `).join('');
+
+                card.innerHTML = `
+                    <h3 class="font-semibold text-slate-100 text-sm flex items-center gap-2">
+                        <span class="bg-indigo-500/20 text-indigo-400 text-xs px-2 py-0.5 rounded font-bold">${q.id}</span>
+                        ${q.pregunta}
+                    </h3>
+                    <div class="space-y-2 pt-1">
+                        ${opcionesHTML}
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // Enviar respuesta a Google Sheets
+        async function enviarEncuestaNube(e) {
+            e.preventDefault();
+            const btnEnviar = document.getElementById('btn-enviar');
+            btnEnviar.disabled = true;
+            btnEnviar.textContent = "Enviando respuesta...";
+
+            const respuesta = {};
+            preguntas.forEach(q => {
+                const selected = document.querySelector(`input[name="p_${q.id}"]:checked`);
+                respuesta[`p_${q.id}`] = parseInt(selected.value);
+            });
+
+            if (WEB_APP_URL === "PEGAR_TU_URL_DE_GOOGLE_APPS_SCRIPT_AQUI") {
+                alert("AVISO: Aún no has configurado el enlace de Google Sheets. Los datos se guardarán temporalmente de forma local en tu navegador para pruebas.");
+                let localData = JSON.parse(localStorage.getItem('mype_temp')) || [];
+                localData.push(respuesta);
+                localStorage.setItem('mype_temp', JSON.stringify(localData));
+                datasetGlobal = localData;
+                alert("¡Respuesta enviada con éxito!");
+                document.getElementById('encuesta-form').reset();
+                btnEnviar.disabled = false;
+                btnEnviar.innerHTML = '<i data-lucide="send" class="w-5 h-5"></i> Enviar Respuestas';
+                lucide.createIcons();
+                cambiarVista('results');
+                return;
+            }
+
+            try {
+                await fetch(WEB_APP_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(respuesta)
+                });
+
+                alert("¡Muchas gracias! Su respuesta ha sido enviada exitosamente.");
+                document.getElementById('encuesta-form').reset();
+                cambiarVista('results');
+            } catch (error) {
+                alert("Hubo un error al enviar la respuesta. Inténtalo de nuevo.");
+                console.error(error);
+            } finally {
+                btnEnviar.disabled = false;
+                btnEnviar.innerHTML = '<i data-lucide="send" class="w-5 h-5"></i> Enviar Respuestas';
+                lucide.createIcons();
+            }
+        }
+
+        // Cargar datos desde Google Sheets
+        async function cargarDatosDesdeNube() {
+            if (WEB_APP_URL === "PEGAR_TU_URL_DE_GOOGLE_APPS_SCRIPT_AQUI") {
+                datasetGlobal = JSON.parse(localStorage.getItem('mype_temp')) || [];
+                renderResults();
+                return;
+            }
+
+            try {
+                const response = await fetch(WEB_APP_URL);
+                const data = await response.json();
+                datasetGlobal = data;
+                renderResults();
+            } catch (error) {
+                console.error("Error al cargar datos de la nube", error);
+            }
+        }
+
+        // Renderizar Cuadros y Gráficos
+        function renderResults() {
+            const container = document.getElementById('resultados-grid');
+            container.innerHTML = '';
+            const total = datasetGlobal.length;
+
+            document.getElementById('badge-count').textContent = total;
+            document.getElementById('total-muestra').textContent = total;
+
+            preguntas.forEach(q => {
+                const conteo = [0, 0, 0];
+                datasetGlobal.forEach(d => {
+                    const val = d[`p_${q.id}`];
+                    if (val !== undefined && val !== null) {
+                        conteo[val]++;
+                    }
+                });
+
+                let maxIdx = 0;
+                let maxVal = conteo[0];
+                conteo.forEach((c, idx) => {
+                    if (c > maxVal) { maxVal = c; maxIdx = idx; }
+                });
+
+                const porcentajeMayor = total > 0 ? ((maxVal / total) * 100).toFixed(1) : 0;
+                const opcionMayoritaria = q.opciones[maxIdx];
+
+                const card = document.createElement('div');
+                card.className = "bg-slate-800/90 border border-slate-700/80 rounded-2xl p-6 shadow-xl space-y-6";
+
+                card.innerHTML = `
+                    <div class="border-b border-slate-700 pb-3">
+                        <h3 class="font-bold text-indigo-300 text-base">${q.titulo}</h3>
+                        <p class="text-xs text-slate-400 mt-1">${q.pregunta}</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-center">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs text-left text-slate-300">
+                                <thead class="text-slate-400 bg-slate-900/60 uppercase text-[10px]">
+                                    <tr>
+                                        <th class="px-3 py-2 rounded-l">Alternativa</th>
+                                        <th class="px-2 py-2 text-center">fi</th>
+                                        <th class="px-2 py-2 text-center rounded-r">hi%</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-700/50">
+                                    ${q.opciones.map((op, idx) => {
+                                        const freq = conteo[idx];
+                                        const pct = total > 0 ? ((freq / total) * 100).toFixed(1) : 0;
+                                        return `
+                                            <tr>
+                                                <td class="px-3 py-2 flex items-center gap-1.5">
+                                                    <span class="w-2.5 h-2.5 rounded-full inline-block" style="background-color: ${chartColors[idx]}"></span>
+                                                    ${op}
+                                                </td>
+                                                <td class="px-2 py-2 text-center font-semibold">${freq}</td>
+                                                <td class="px-2 py-2 text-center font-bold text-indigo-400">${pct}%</td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                    <tr class="font-bold bg-slate-900/40 text-slate-100">
+                                        <td class="px-3 py-2">Total</td>
+                                        <td class="px-2 py-2 text-center">${total}</td>
+                                        <td class="px-2 py-2 text-center">100%</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="relative flex justify-center items-center h-48">
+                            <canvas id="chart-${q.id}"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900/70 border border-slate-700/60 rounded-xl p-4 text-xs space-y-1">
+                        <div class="flex items-center gap-1.5 text-amber-400 font-semibold mb-1">
+                            <i data-lucide="message-square" class="w-4 h-4"></i>
+                            <span>Interpretación del Cuadro y Gráfico:</span>
+                        </div>
+                        <p class="text-slate-300 leading-relaxed">
+                            ${total === 0 ? 'Aún no se registran datos.' : `Del total de <strong>${total} encuestados</strong>, el <strong>${porcentajeMayor}% (${maxVal} personas)</strong> indicó que: <em>"${opcionMayoritaria}"</em>.`}
+                        </p>
+                    </div>
+                `;
+
+                container.appendChild(card);
+
+                setTimeout(() => {
+                    const ctx = document.getElementById(`chart-${q.id}`).getContext('2d');
+                    if (chartInstances[q.id]) chartInstances[q.id].destroy();
+
+                    chartInstances[q.id] = new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: q.opciones,
+                            datasets: [{
+                                data: conteo,
+                                backgroundColor: chartColors,
+                                borderWidth: 2,
+                                borderColor: '#1e293b'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            const val = context.raw || 0;
+                                            const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
+                                            return ` ${context.label}: ${val} (${pct}%)`;
+                                        }
+                                    }
+                                }
+                            },
+                            cutout: '65%'
+                        }
+                    });
+                }, 50);
+            });
+
+            lucide.createIcons();
+        }
+    </script>
+</body>
+</html>
